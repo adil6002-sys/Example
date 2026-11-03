@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkPulse - Attendance Management System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <!-- Navigation bar -->
+  <nav class="navbar">
+    <a href="#" class="brand">
+      <div class="brand-icon"><i class="fa-solid fa-calendar-check"></i></div>
+      <span>WorkPulse HR</span>
+    </a>
+
+    <ul class="nav-links">
+      <li class="nav-item"><button class="nav-btn active" data-tab="tab-dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</button></li>
+      <li class="nav-item"><button class="nav-btn" data-tab="tab-attendance"><i class="fa-solid fa-clipboard-user"></i> Daily Attendance</button></li>
+      <li class="nav-item"><button class="nav-btn" data-tab="tab-employees"><i class="fa-solid fa-users"></i> Employees</button></li>
+      <li class="nav-item"><button class="nav-btn" data-tab="tab-leaves"><i class="fa-solid fa-umbrella-beach"></i> Leaves</button></li>
+      <li class="nav-item"><button class="nav-btn" data-tab="tab-reports"><i class="fa-solid fa-file-invoice"></i> Reports</button></li>
+    </ul>
+
+    <div class="header-actions">
+      <div class="clock-display" id="live-clock">
+        <i class="fa-regular fa-clock"></i> <span id="clock-text">--:--:--</span>
+      </div>
+      <button class="btn btn-primary btn-sm" id="btn-quick-clock-modal">
+        <i class="fa-solid fa-fingerprint"></i> Quick Clock In/Out
+      </button>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- 1. DASHBOARD TAB -->
+    <section id="tab-dashboard" class="tab-pane active">
+      <!-- Welcome & Quick Action Banner -->
+      <div class="action-banner">
+        <div class="banner-text">
+          <h2>Welcome to WorkPulse Attendance System</h2>
+          <p id="today-date-str">Tracking attendance, shifts, and leaves in real-time.</p>
+        </div>
+        <div class="banner-actions">
+          <button class="btn btn-secondary" id="btn-banner-clock-in"><i class="fa-solid fa-arrow-right-to-bracket"></i> Clock In</button>
+          <button class="btn btn-secondary" id="btn-banner-clock-out"><i class="fa-solid fa-arrow-right-from-bracket"></i> Clock Out</button>
+          <button class="btn btn-primary" id="btn-open-leave-modal"><i class="fa-solid fa-paper-plane"></i> Apply Leave</button>
+        </div>
+      </div>
+
+      <!-- Live Key Metrics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h4>Total Staff</h4>
+            <div class="stat-number" id="stat-total-employees">0</div>
+          </div>
+          <div class="stat-icon icon-blue"><i class="fa-solid fa-users"></i></div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-info">
+            <h4>Present Today</h4>
+            <div class="stat-number" id="stat-present-today">0</div>
+          </div>
+          <div class="stat-icon icon-green"><i class="fa-solid fa-user-check"></i></div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-info">
+            <h4>Late Arrival</h4>
+            <div class="stat-number" id="stat-late-today">0</div>
+          </div>
+          <div class="stat-icon icon-amber"><i class="fa-solid fa-user-clock"></i></div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-info">
+            <h4>On Leave</h4>
+            <div class="stat-number" id="stat-leave-today">0</div>
+          </div>
+          <div class="stat-icon icon-purple"><i class="fa-solid fa-plane-departure"></i></div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-info">
+            <h4>Absent</h4>
+            <div class="stat-number" id="stat-absent-today">0</div>
+          </div>
+          <div class="stat-icon icon-red"><i class="fa-solid fa-user-xmark"></i></div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-info">
+            <h4>Attendance Rate</h4>
+            <div class="stat-number" id="stat-attendance-rate">0%</div>
+          </div>
+          <div class="stat-icon icon-green"><i class="fa-solid fa-chart-line"></i></div>
+        </div>
+      </div>
+
+      <!-- Dashboard Split: Department Performance & Recent Attendance -->
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><i class="fa-solid fa-building"></i> Department Attendance (This Month)</span>
+          </div>
+          <div class="panel-body" id="dept-stats-container">
+            <!-- Dynamic Department Stats -->
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><i class="fa-solid fa-clock-rotate-left"></i> Today's Live Attendance Feed</span>
+            <button class="btn btn-secondary btn-sm" id="btn-refresh-dashboard"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Clock In</th>
+                  <th>Clock Out</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-recent-feed">
+                <!-- Live entries -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. DAILY ATTENDANCE TAB -->
+    <section id="tab-attendance" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title"><i class="fa-solid fa-clipboard-user"></i> Daily Attendance Matrix</span>
+          <div class="toolbar-group">
+            <button class="btn btn-primary btn-sm" id="btn-open-manual-log-modal"><i class="fa-solid fa-plus"></i> Manual Log</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <label for="att-date-picker" style="font-weight:600;font-size:0.9rem;">Date:</label>
+              <input type="date" id="att-date-picker" class="form-control">
+              <select id="att-dept-filter" class="form-control">
+                <option value="ALL">All Departments</option>
+              </select>
+              <select id="att-status-filter" class="form-control">
+                <option value="ALL">All Statuses</option>
+                <option value="PRESENT">Present</option>
+                <option value="LATE">Late</option>
+                <option value="HALF_DAY">Half Day</option>
+                <option value="ON_LEAVE">On Leave</option>
+                <option value="ABSENT">Absent</option>
+              </select>
+            </div>
+            <div class="toolbar-group">
+              <input type="text" id="att-search-input" class="form-control" placeholder="Search employee...">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Department</th>
+                  <th>Shift In</th>
+                  <th>Shift Out</th>
+                  <th>Work Hours</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-table-body">
+                <!-- Dynamic daily attendance rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. EMPLOYEES TAB -->
+    <section id="tab-employees" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title"><i class="fa-solid fa-users"></i> Employee Directory</span>
+          <button class="btn btn-primary btn-sm" id="btn-open-add-emp-modal"><i class="fa-solid fa-user-plus"></i> Add Employee</button>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <input type="text" id="emp-search-input" class="form-control" placeholder="Search by name, code, email...">
+              <select id="emp-dept-filter" class="form-control">
+                <option value="ALL">All Departments</option>
+              </select>
+              <select id="emp-status-filter" class="form-control">
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Employee</th>
+                  <th>Department</th>
+                  <th>Role</th>
+                  <th>Contact</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="employees-table-body">
+                <!-- Dynamic employee rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. LEAVES TAB -->
+    <section id="tab-leaves" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title"><i class="fa-solid fa-umbrella-beach"></i> Leave Applications & Requests</span>
+          <button class="btn btn-primary btn-sm" id="btn-leaves-apply-modal"><i class="fa-solid fa-plus"></i> Request Leave</button>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <select id="leaves-status-filter" class="form-control">
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Department</th>
+                  <th>Leave Type</th>
+                  <th>Dates</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Reviewer Action</th>
+                </tr>
+              </thead>
+              <tbody id="leaves-table-body">
+                <!-- Dynamic leave rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. REPORTS TAB -->
+    <section id="tab-reports" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title"><i class="fa-solid fa-file-lines"></i> Attendance Reports & CSV Export</span>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar" style="background:#f8fafc;padding:1rem;border-radius:8px;">
+            <div class="toolbar-group">
+              <label style="font-weight:600;font-size:0.85rem;">From:</label>
+              <input type="date" id="rep-start-date" class="form-control">
+              <label style="font-weight:600;font-size:0.85rem;">To:</label>
+              <input type="date" id="rep-end-date" class="form-control">
+              <select id="rep-dept-filter" class="form-control">
+                <option value="ALL">All Departments</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" id="btn-rep-filter"><i class="fa-solid fa-filter"></i> Apply Filter</button>
+            </div>
+            <div class="toolbar-group">
+              <button class="btn btn-success btn-sm" id="btn-export-csv"><i class="fa-solid fa-download"></i> Export to CSV</button>
+            </div>
+          </div>
+
+          <div style="margin-top:1.5rem;" class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Code</th>
+                  <th>Employee</th>
+                  <th>Department</th>
+                  <th>In</th>
+                  <th>Out</th>
+                  <th>Hours</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="reports-table-body">
+                <!-- Filtered reports list -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: QUICK CLOCK IN / OUT -->
+  <div class="modal-overlay" id="modal-clock">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-clock-title"><i class="fa-solid fa-fingerprint"></i> Quick Clock In / Out</h3>
+        <button class="modal-close" data-close="modal-clock">&times;</button>
+      </div>
+      <form id="form-clock">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="clock-emp-select">Select Employee</label>
+            <select id="clock-emp-select" class="form-control" required style="width:100%;">
+              <!-- Loaded dynamically -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="clock-action-type">Action</label>
+            <select id="clock-action-type" class="form-control" style="width:100%;">
+              <option value="IN">Clock In (Shift Start)</option>
+              <option value="OUT">Clock Out (Shift End)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="clock-custom-time">Time (Optional - default is right now)</label>
+            <input type="time" id="clock-custom-time" class="form-control" style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label for="clock-notes">Notes</label>
+            <input type="text" id="clock-notes" class="form-control" placeholder="e.g. Remote work, field visit" style="width:100%;">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-clock">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-clock">Confirm Attendance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT EMPLOYEE -->
+  <div class="modal-overlay" id="modal-employee">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-emp-title"><i class="fa-solid fa-user-plus"></i> Add New Employee</h3>
+        <button class="modal-close" data-close="modal-employee">&times;</button>
+      </div>
+      <form id="form-employee">
+        <input type="hidden" id="emp-edit-id">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="emp-code">Employee Code *</label>
+              <input type="text" id="emp-code" class="form-control" required placeholder="EMP-009" style="width:100%;">
+            </div>
+            <div class="form-group">
+              <label for="emp-status">Status</label>
+              <select id="emp-status" class="form-control" style="width:100%;">
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="emp-firstname">First Name *</label>
+              <input type="text" id="emp-firstname" class="form-control" required placeholder="John" style="width:100%;">
+            </div>
+            <div class="form-group">
+              <label for="emp-lastname">Last Name *</label>
+              <input type="text" id="emp-lastname" class="form-control" required placeholder="Doe" style="width:100%;">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="emp-email">Email Address *</label>
+            <input type="email" id="emp-email" class="form-control" required placeholder="john.doe@techvision.com" style="width:100%;">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="emp-department">Department *</label>
+              <input type="text" id="emp-department" list="dept-datalist" class="form-control" required placeholder="Engineering" style="width:100%;">
+              <datalist id="dept-datalist"></datalist>
+            </div>
+            <div class="form-group">
+              <label for="emp-role">Job Title / Role *</label>
+              <input type="text" id="emp-role" class="form-control" required placeholder="Backend Engineer" style="width:100%;">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="emp-phone">Phone Number</label>
+            <input type="text" id="emp-phone" class="form-control" placeholder="+1-555-0199" style="width:100%;">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-employee">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-emp">Save Employee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: APPLY LEAVE -->
+  <div class="modal-overlay" id="modal-leave">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-umbrella-beach"></i> Apply for Leave</h3>
+        <button class="modal-close" data-close="modal-leave">&times;</button>
+      </div>
+      <form id="form-leave">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="leave-emp-select">Employee *</label>
+            <select id="leave-emp-select" class="form-control" required style="width:100%;"></select>
+          </div>
+          <div class="form-group">
+            <label for="leave-type-select">Leave Type *</label>
+            <select id="leave-type-select" class="form-control" style="width:100%;">
+              <option value="ANNUAL">Annual Leave / Vacation</option>
+              <option value="SICK">Sick Leave</option>
+              <option value="CASUAL">Casual / Personal Leave</option>
+              <option value="UNPAID">Unpaid Leave</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="leave-start-date">Start Date *</label>
+              <input type="date" id="leave-start-date" class="form-control" required style="width:100%;">
+            </div>
+            <div class="form-group">
+              <label for="leave-end-date">End Date *</label>
+              <input type="date" id="leave-end-date" class="form-control" required style="width:100%;">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="leave-reason">Reason</label>
+            <textarea id="leave-reason" class="form-control" rows="3" placeholder="Explain the reason for leave..." style="width:100%;"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-leave">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-leave">Submit Leave Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MANUAL ATTENDANCE LOG / EDIT -->
+  <div class="modal-overlay" id="modal-manual-att">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pencil"></i> Mark / Adjust Attendance</h3>
+        <button class="modal-close" data-close="modal-manual-att">&times;</button>
+      </div>
+      <form id="form-manual-att">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="manual-emp-select">Employee *</label>
+            <select id="manual-emp-select" class="form-control" required style="width:100%;"></select>
+          </div>
+          <div class="form-group">
+            <label for="manual-date">Date *</label>
+            <input type="date" id="manual-date" class="form-control" required style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label for="manual-status">Status *</label>
+            <select id="manual-status" class="form-control" style="width:100%;">
+              <option value="PRESENT">Present</option>
+              <option value="LATE">Late</option>
+              <option value="HALF_DAY">Half Day</option>
+              <option value="ABSENT">Absent</option>
+              <option value="ON_LEAVE">On Leave</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="manual-clock-in">Clock In (HH:MM)</label>
+              <input type="time" id="manual-clock-in" class="form-control" style="width:100%;">
+            </div>
+            <div class="form-group">
+              <label for="manual-clock-out">Clock Out (HH:MM)</label>
+              <input type="time" id="manual-clock-out" class="form-control" style="width:100%;">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="manual-notes">Admin Notes</label>
+            <input type="text" id="manual-notes" class="form-control" placeholder="e.g. Regularized by Manager" style="width:100%;">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-manual-att">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-manual-att">Save Attendance Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
